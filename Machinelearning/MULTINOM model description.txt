@@ -1,0 +1,25 @@
+Penalized Multinomial Regression 
+
+32 samples
+ 6 predictor
+ 2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 100 times) 
+Summary of sample sizes: 25, 26, 25, 26, 26, 25, ... 
+Resampling results across tuning parameters:
+
+  decay         Accuracy   Kappa    
+  0.0000000000  0.8561429  0.7109382
+  0.0001000000  0.8778095  0.7550998
+  0.0002371374  0.8758571  0.7513490
+  0.0005623413  0.8680952  0.7360284
+  0.0013335214  0.8653333  0.7306217
+  0.0031622777  0.8650000  0.7301037
+  0.0074989421  0.8738095  0.7483874
+  0.0177827941  0.8769048  0.7544889
+  0.0421696503  0.8793810  0.7593130
+  0.1000000000  0.8841905  0.7688863
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was decay = 0.1.

@@ -1,0 +1,24 @@
+Neural Network 
+
+32 samples
+ 6 predictor
+ 2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 100 times) 
+Summary of sample sizes: 25, 26, 25, 26, 26, 26, ... 
+Resampling results across tuning parameters:
+
+  size  decay  Accuracy   Kappa    
+  1     0e+00  0.9306667  0.8596988
+  1     1e-04  0.9400952  0.8782792
+  1     1e-01  0.9333333  0.8649832
+  3     0e+00  0.9322381  0.8628491
+  3     1e-04  0.9491905  0.8970543
+  3     1e-01  0.9327619  0.8638576
+  5     0e+00  0.9343810  0.8667558
+  5     1e-04  0.9594762  0.9175517
+  5     1e-01  0.9328095  0.8639156
+
+Accuracy was used to select the optimal model using the largest value.
+The final values used for the model were size = 5 and decay = 1e-04.

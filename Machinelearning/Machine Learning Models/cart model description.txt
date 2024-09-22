@@ -1,0 +1,15 @@
+CART 
+
+32 samples
+ 6 predictor
+ 2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 100 times) 
+Summary of sample sizes: 26, 25, 26, 26, 25, 25, ... 
+Resampling results:
+
+  Accuracy   Kappa   
+  0.8608095  0.716686
+
+Tuning parameter 'maxdepth' was held constant at a value of 1

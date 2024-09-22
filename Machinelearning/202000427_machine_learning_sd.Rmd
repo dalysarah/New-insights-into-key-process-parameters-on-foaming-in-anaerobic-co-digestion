@@ -1,0 +1,442 @@
+---
+title: "Machine Learning Categorial-Different Models"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Sarah Daly
+2/26/20
+Conduct supervised machine learning for the categorical variable (Foaming, yes no) with continuous predictors variables by testing an array of different models
+
+Generate the accuracy of each model
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+#Set Working Directory
+```{r}
+setwd("C:/Users/dalys/OneDrive/Desktop/PHD paper notes/Foam_Github/Table3")
+
+```
+#Load libraries
+```{r}
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(tidyr) #https://uc-r.github.io/tidyr reshape data
+library('RANN')
+# load library
+library(neuralnet)
+library(caret)
+library(class)#knn package
+library(descr)
+library(caret)
+library(e1071)
+library(randomForest)
+library(kernlab)
+library(frbs)
+library(mgcv)
+library(fastICA)
+#For a depper analysis
+library(gmodels)
+library(descr)
+library(RANN)
+library(NeuralNetTools)
+library(NeuralSens)
+```
+#Load data
+```{r}
+# Read the Data
+data=read.csv("20200427_ML_input.csv", header=T, na.strings = NA) #Date was balanced-triplicates for each sample
+names(data)
+```
+
+#Clean data-knn impute method
+```{r}
+str(data)
+summary(data)
+head(data)
+class(data)
+lapply(data, is.numeric)
+
+#check if the data has any missing values:
+sum(is.na(data))
+
+#Remove NAs from data
+#http://rismyhammer.com/ml/ImputeMissingData1.html
+#input  missing values using KNN algorithm. We will predict these missing values based on other attributes for that row. Also, we'll scale and center the numerical data by using the convenient preprocess() in Caret.
+preProcValues <- preProcess(data, method = c("knnImpute"))
+head(preProcValues)
+data <- predict(preProcValues, data)
+sum(is.na(data))
+names(data)
+```
+
+#Pre-process data
+https://machinelearningmastery.com/pre-process-your-dataset-in-r/
+```{r}
+# Check the result
+head(data)
+dim(data)
+str(data)
+#Add ID column
+ID <- seq(from = 1, to = nrow(data))
+data<-cbind(data,ID)
+
+names(data)
+str(data)
+
+#check if the data has any missing values:
+sum(is.na(data))
+#centering and scaling numerical 
+preProcValues <- preProcess(data, method = c("center","scale"))
+
+data_processed <- predict(preProcValues, data)
+sum(is.na(data_processed))
+head(data_processed)
+#Checking the structure of transformed train file
+#Converting outcome variable to numeric
+data_processed$Foaming<-ifelse(data_processed$Foaming=='No',0,1)
+id<-data_processed$ID
+data_processed$ID<-NULL
+#Checking the structure of processed train file
+str(data_processed)
+data_processed$Foaming
+
+#Converting every categorical variable to numerical using dummy variables
+dmy <- dummyVars(" ~ .", data = data_processed,fullRank = T)
+data_transformed <- data.frame(predict(dmy, newdata = data_processed))
+
+#Checking the structure of transformed train file
+str(data_transformed)
+head(data_transformed)
+```
+#Training and Testing Data
+```{r}
+#Set a seed to get the same sequence of random numbers whenever you supply the same seed in the random number generator
+set.seed(945)
+#Converting the dependent variable back to categorical
+data_transformed$Foaming<-as.factor(data_transformed$Foaming)
+# this is now a dummy variable ready for regression analysis
+str(data_transformed)
+
+#use createDataPartition() to split our training data into two sets 
+# Random sampling-split data for training and vlidation 
+index <- createDataPartition(data_transformed$Foaming, p=0.67, list=FALSE)
+
+# Subset training set with index
+len=length(data_transformed) #remove id column
+data.training <- data_transformed[index,1:len] #drop ID colujmn
+
+# Subset test set with index
+data.test <- data_transformed[-index,1:len] #drop ID col
+#check partition 
+dim(data.training)
+dim(data.test)
+
+#Select the best features for the models
+#You can assist your algorithm by feeding in only those features that are really important
+
+#Feature selection using rfe in caret (Recursive Feature Modelling)
+control <- rfeControl(functions = rfFuncs, #random forest
+                  method = "repeatedcv", #Resamplnig method
+                 repeats = 10,
+                 verbose = FALSE)
+
+#control <- rfeControl(functions = caretFuncs, #caret
+ #                  method = "repeatedcv", #Resamplnig method
+  #                 repeats = 10,
+   #                verbose = FALSE)
+
+outcomeName<-'Foaming'
+predictors<-names(data.training)[!names(data.training) %in% outcomeName]
+#https://stats.stackexchange.com/questions/197801/important-question-regarding-feature-selection-methodologies-in-r-concerning-the
+
+#Repeat rfe data selection multeiple times with differen random seed numbers
+#Initialize variables
+counter=1
+bestgroup<-NULL
+accuracy<-NULL
+opp1<-list()
+compare<-NULL
+rn<-NULL
+
+while(counter<=11){
+op1<-c() #Initialize a clean list
+randomnum<-round(runif(1, 1, 100003),digits=0)
+#randomnum<-round(runif(1, 1, 5003),digits=0)
+set.seed(randomnum) #Run iwth random number each time
+print(randomnum)
+rn[counter]=randomnum
+Foam_Pred_Profile <- rfe(data.training[,predictors], data.training[,outcomeName],rfeControl = control)
+bestgroup[counter]<-Foam_Pred_Profile$bestSubset
+q=Foam_Pred_Profile$results
+accuracy[counter]<-min(q$Accuracy)
+compare<-(cbind(bestgroup,accuracy))
+print(compare)
+tmp<-(Foam_Pred_Profile$optVariable[1:6])
+print(tmp)
+op1<-tmp  #Put results in a clean list
+opp1[[counter]]<-op1 #Create a list of lists
+counter=counter+1
+}
+
+#Find row number of the highest accuracy in best group 
+maxrow=which(compare[,2] == max(accuracy))
+maxrow
+predictors=opp1[maxrow]
+predictors
+rn[maxrow]
+compare[maxrow,]
+
+
+#Taking truncated only the top 6 predictors-previous run
+
+#4/27/20 10:05PM
+predictors =c("FE.II..S",  "Fe.II..TP", "FE", "TCOD","TVFA.TALK", "CU")
+
+
+#Taking truncated only the top 6 predictors-previous run
+#Find row number of the highest accuracy in best group 
+#predictors=opp1[maxrow]
+#"FE.II..S"  "Fe.II..TP" "FE"        "TCOD"      "TVFA.TALK" "CU"       
+#83106
+#bestgroup  accuracy 
+ 
+#   29.00      0.89 
+```
+
+
+#Machine learning models
+https://rpubs.com/ezgi/classification 
+```{r}
+library(nnet)
+set.seed(10)
+# Overview of algos supported by caret
+
+outcomeName<- "Foaming"
+#Tuning model
+#Specfiy method
+fitControl <- trainControl(
+  method = "repeatedcv",
+  number = 5, #using 5-Fold cross-validation repeated 5 times
+  repeats = 100)
+#To find the parameters of a model that can be tuned, you can use
+modelLookup(model='multinom')
+#use any number of possible values for each tuning parameter through tuneLength
+
+
+# Train a model
+#Cross Valdiaton 
+#LM model (Linear REgression)-removed not suitable
+
+#penalized multinomial regression (Classification)
+model_multinom<- train(data.training[, predictors], data.training[, outcomeName], method="multinom",trControl=fitControl,tuneLength=10)
+#plot
+plot(model_multinom, main="Multinom")
+# save the model to disk
+
+#summary(model_rf$finalModel)
+
+#KNN model
+#k-Nearest Neighbors (Classification, Regression, Nonlinear)
+model_knn <- train(data.training[, predictors], data.training[, outcomeName], method='knn',trControl=fitControl,tuneLength=10)
+plot(model_knn, main="knn")
+
+#Cart model(Classification, Regression, NOnlinear)
+model_cart <- train(data.training[, predictors], data.training[, outcomeName], method='rpart2',trControl=fitControl,tuneLength=10)
+plot(model_cart, main="cart")
+
+#NeuralNetmodel (Classification, Regression)
+model_nn<- train(data.training[, predictors], data.training[, outcomeName], method="nnet",trControl=fitControl,tuneLength=3)
+plot(model_nn, main="nn")
+
+#SVM model (complex nonlinear methods, Classification, Regression)
+model_svm<- train(data.training[, predictors], data.training[, outcomeName], method="svmRadial",trControl=fitControl,tuneLength=10)
+plot(model_svm, main="svm")
+
+#RF model (complex nonlinear methods, Classification, Regression)
+model_rf<- train(data.training[, predictors], data.training[, outcomeName], method="rf",trControl=fitControl,tuneLength=10)
+plot(model_rf, main="rf")
+
+#glmnet model (complex nonlinear methods, Classification, Regression)
+model_glmnet<- train(data.training[, predictors], data.training[, outcomeName], method="glmnet",trControl=fitControl,tuneLength=10)
+plot(model_glmnet, main="glmnet")
+
+#Variable importance
+#Predictors that are important for the majority of models represents genuinely important predictors.
+
+#Compare models
+compare_models(model_glmnet,model_rf)
+compare_models(model_nn, model_knn)
+compare_models(model_rf, model_svm)
+compare_models(model_multinom, model_knn)
+
+#Save the modesl
+saveRDS(model_multinom, "./model_multinom.rds")
+saveRDS(model_knn, "./model_knn.rds")
+saveRDS(model_cart, "./model_cart.rds")
+saveRDS(model_nn, "./model_nn.rds")
+saveRDS(model_svm, "./model_svm.rds")
+saveRDS(model_rf, "./model_rf.rds")
+saveRDS(model_glmnet, "./model_glment.rds")
+
+#Load Saved models
+#model_multinom <- readRDS("./model_multinom.rds")
+#model_knn <- readRDS("./model_knn.rds")
+#model_cart <- readRDS("./model_cart.rds")
+#model_nn <- readRDS("./Machine Learning Results/202000305_FoamProject_Neural_Network_modeltraining_categorial_v08_sd/20200306_Machine Learning n2/model_nn.rds")
+#model_svm <- readRDS("./model_svm.rds")
+#model_rf <- readRDS("./model_rf.rds")
+#model_glment <- readRDS("./model_glment.rds")
+
+
+#Save model accuracies 
+capture.output(model_knn,file="knn model description.txt")
+capture.output(model_cart,file="cart model description.txt")
+capture.output(model_nn,file="NN model description.txt")
+capture.output(model_svm,file="SVM model description.txt")
+capture.output(model_rf,file="RF model description.txt")
+capture.output(model_glmnet,file="GLMNET model description.txt")
+capture.output(model_multinom,file="MULTINOM model description.txt")
+
+varImp(object=model_knn)
+varImp(object=model_cart)
+varImp(object=model_nn)
+varImp(object=model_svm)
+varImp(object=model_rf)
+varImp(object=model_multinom)
+varImp(object=model_glmnet)
+
+#Plotting Varianle importance for GBM
+plot(varImp(object=model_knn),main="knn - Variable Importance")
+plot(varImp(object=model_cart),main="cart - Variable Importance")
+plot(varImp(object=model_nn),main="NNET - Variable Importance")
+plot(varImp(object=model_svm),main="SVM - Variable Importance")
+plot(varImp(object=model_rf),main="Random Forest - Variable Importance")
+plot(varImp(object=model_multinom, main="penalized multinomial regression"))
+plot(varImp(object=model_glmnet, main="penalized multinomial regression"))
+#evaluate how the model has done on your data:
+#https://machinelearningmastery.com/machine-learning-in-r-step-by-step/
+
+# summarize accuracy of models
+results <- resamples(list(cart=model_cart, knn=model_knn, nn=model_nn, svm=model_svm,rf=model_rf, model_multinom,glmn=model_glmnet))
+summary(results)
+
+# PLot compare accuracy of models
+#We are using the metric of "Accuracy" to evaluate models. This is a ratio of the number of correctly predicted instances in divided by the total number of instances in the dataset multiplied by 100 to give a percentage (e.g. 95% accurate). We will be using the metric variable when we run build and evaluate each model next.
+dotplot(results)
+# summarize Best Model
+print(model_svm)
+print(model_rf)
+print(model_lm)
+print(model_multinom)
+print(model_nn)
+print(model_knn)
+print(model_glmnet)
+
+# Predict the labels of the test set
+#data.testLabels <- as.factor((data.test[, 1]))
+
+data.testLabels <- data[-index,1]
+data.trainLabels<-data[index,1]
+
+KNN
+prediction_knn<-predict(object=model_knn,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_knn)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_knn,data.test[,outcomeName]),file="Confusion Matrix knn caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_knn, prop.chisq=FALSE ), file="CrossTable knn caret machine learning.txt")
+
+#cart
+prediction_cart<-predict(object=model_cart,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_cart)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_cart,data.test[,outcomeName]),file="Confusion Matrix cart caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_cart, prop.chisq=FALSE ), file="CrossTable cart caret machine learning.txt")
+
+
+#nn
+prediction_nn<-predict(object=model_nn,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_nn)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_nn,data.test[,outcomeName]),file="Confusion matrix NN caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_nn, prop.chisq=FALSE ), file="CrossTable nn caret machine learning.txt")
+
+#svm
+prediction_svm<-predict(object=model_svm,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_svm)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_svm,data.test[,outcomeName]),file="Confusion matrix svm caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_svm, prop.chisq=FALSE ), file="CrossTable svm caret machine learning.txt")
+
+#rf
+prediction_rf<-predict(object=model_rf,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_rf)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_rf,data.test[,outcomeName]),file="Confusion matrix rf caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_rf, prop.chisq=FALSE ), file="CrossTable rf caret machine learning.txt")
+
+#multinom
+prediction_multinom<-predict(object=model_multinom,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_multinom)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_multinom,data.test[,outcomeName]),file="Confusion matrix multinom caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_multinom, prop.chisq=FALSE ), file="CrossTable  multinom machine learning.txt")
+
+#glmnet
+prediction_glmnet<-predict(object=model_glmnet,data.test[,predictors], type="raw")
+# Evaluate the predictions
+table(prediction_glmnet)
+# Confusion matrix 
+capture.output(confusionMatrix(prediction_glmnet,data.test[,outcomeName]),file="Confusion matrix glment caret machine learning.txt")
+capture.output(CrossTable(x = data.testLabels, y = prediction_glmnet, prop.chisq=FALSE ), file="CrossTable  glmnet machine learning.txt")
+
+
+library(nnet)
+library(clusterGeneration)
+require(clusterGeneration)
+require(nnet)
+library(NeuralNetTools)
+devtools::source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+#Plot NN model
+
+#Save plot image
+tiff("NN model image machine learning.tif", res=600, compression = "lzw", height=7, width=13, units="in")
+plot.nnet(model_nn$finalModel,pos.col='darkblue',neg.col='lightgrey')
+dev.off()
+
+pdf("NN model image machine learning.pdf",height=7, width=13)
+plot.nnet(model_nn$finalModel,pos.col='darkblue',neg.col='lightgrey')
+dev.off()
+
+gar=garson(model_nn$finalModel)
+gar$data
+capture.output(gar$data, file="NN model var importance machine learning.txt")
+
+pdf("NN model var importance machine learning.pdf",height=7, width=13)
+garson(model_nn$finalModel)
+dev.off()
+
+tiff("NN model var importance machine learning.tif", res=600, compression = "lzw", height=7, width=13, units="in")
+garson(model_nn$finalModel)
+dev.off()
+
+tiff("NN model var importance olden machine learning.tif", res=600, compression = "lzw", height=7, width=13, units="in")
+olden(model_nn$finalModel)
+dev.off()
+
+
+library(simsalapar)
+tryCatch.W.E(lekprofile(model_nn$finalModel))
+
+
+```
+

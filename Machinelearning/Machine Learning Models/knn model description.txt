@@ -1,0 +1,25 @@
+k-Nearest Neighbors 
+
+32 samples
+ 6 predictor
+ 2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 100 times) 
+Summary of sample sizes: 26, 26, 26, 25, 25, 26, ... 
+Resampling results across tuning parameters:
+
+  k   Accuracy   Kappa    
+   5  0.9064286  0.8079673
+   7  0.8035238  0.5979115
+   9  0.7650952  0.5171758
+  11  0.6943810  0.3670155
+  13  0.6123333  0.1897207
+  15  0.5886667  0.1351357
+  17  0.5905714  0.1388933
+  19  0.5905714  0.1388933
+  21  0.5905714  0.1388933
+  23  0.5905714  0.1388933
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was k = 5.

@@ -1,0 +1,20 @@
+Random Forest 
+
+32 samples
+ 6 predictor
+ 2 classes: '0', '1' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 100 times) 
+Summary of sample sizes: 26, 25, 25, 26, 26, 26, ... 
+Resampling results across tuning parameters:
+
+  mtry  Accuracy   Kappa    
+  2     0.9838095  0.9663814
+  3     0.9675714  0.9332515
+  4     0.9430952  0.8832701
+  5     0.9184762  0.8332947
+  6     0.9052381  0.8066733
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was mtry = 2.
