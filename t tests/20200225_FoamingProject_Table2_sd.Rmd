@@ -1,0 +1,145 @@
+---
+title: "Biotown Foaming v. Nonfoaming"
+author: "Sarah Daly"
+date: "March 4, 2019"
+output:
+  word_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+Purpose:  Export bargraphs (.tiff) and table of pvalues (.png) of the differences between raw substrate chemical characteristics and the relevant ratios of these chemical characteristics. 
+
+#Set working director and load data
+
+```{r}
+setwd("C:/Users/dalys/OneDrive/Desktop/PHD paper notes/Foam_Github/Table2")
+list.files()
+
+df <- read.csv("20200129_BMPProject_InfluentChar_sd.csv", na.strings="NA")
+head(df)
+
+```
+
+#Load packages
+```{r}
+library(ggplot2)
+library(e1071)
+library(car)
+library(FactoMineR)
+library(car)
+library(hydroGOF)
+library(ggplot2)
+library(leaps)
+library(reshape2)
+library(dplyr) #filtering
+library(tidyr) #https://uc-r.github.io/tidyr
+#https://cran.r-project.org/web/packages/magicfor/vignettes/magicfor.html
+#install.packages("devtools") # if you have not installed "devtools" package
+#devtools::install_github("hoxo-m/magicfor")
+library(magicfor)
+
+```
+
+#Reshape data so using tidyr to stack data
+```{r}
+df_long<- df %>% gather(Char, Value, PH:Fe.II..TP)
+head(df_long, 24) 
+dim(df_long)
+r1=dim(df_long)[1]
+r1
+sum(is.na(df_long))
+data=na.omit(df_long) #remove NAs
+sum(is.na(data)) #Check that NAs are removed
+r2=dim(data)[1]
+r2
+
+perchange=(r1-r2)/r1
+perchange
+head(data,24)
+dim(data)
+```
+
+#T-test of signficance
+```{r}
+str="EQ" #input section of digester intersted in 
+
+clist <- c("CU", "FE", "NI","TP","OP","TKN","NH3N","SULFATE","TS","VS","PH","TCOD","SCOD","TALK","TVFA","CONDUCTIVITY","TANNIC", "TN","SCOD.TCOD","OP.TP","TCOD.TN.TP","TVFA.TALK","TAN.TKN","TCOD.SULFATE","FS.TS","VS.TS","FE.II..S","Fe.II..TP")
+
+magic_for(print, silent = TRUE) # call magic_for()
+
+for (i in clist) {
+print(i)
+newdata <- subset(data, data$Substrate==str & data$Char==i, #Subset the data
+select=c(Char, Date, Foaming, Substrate, Value))
+newdata
+t.lm=lm(newdata$Value~newdata$Foaming, data=newdata)
+norm_check=shapiro.test(t.lm$residuals) #If P-value <0.05 than the data is not normally distriuted
+print(norm_check)
+#Use parametric comparisiton test .wilcox if p<0.05
+if (norm_check[2]<0.05){pval=pairwise.wilcox.test(newdata$Value, newdata$Foaming)}
+else {
+pval=pairwise.t.test(newdata$Value, newdata$Foaming,p.adjust.method = "bonferroni")}
+print(pval)
+}
+#Get the results from the loop into a data frame
+mag=magic_result_as_dataframe(iter = TRUE)     # get the result
+
+#Extract p values from the lit of vectors [[row]][element]
+l1=cbind(mag$i[1],mag$norm_check[[1]][2],mag$pval[[1]][3])
+l2=cbind(mag$i[2],mag$norm_check[[2]][2],mag$pval[[2]][3])
+l3=cbind(mag$i[3],mag$norm_check[[3]][2],mag$pval[[3]][3])
+l4=cbind(mag$i[4],mag$norm_check[[4]][2],mag$pval[[4]][3])
+l5=cbind(mag$i[5],mag$norm_check[[5]][2],mag$pval[[5]][3])
+l6=cbind(mag$i[6],mag$norm_check[[6]][2],mag$pval[[6]][3])
+l7=cbind(mag$i[7],mag$norm_check[[7]][2],mag$pval[[7]][3])
+l8=cbind(mag$i[8],mag$norm_check[[8]][2],mag$pval[[8]][3])
+l9=cbind(mag$i[9],mag$norm_check[[9]][2],mag$pval[[9]][3])
+l10=cbind(mag$i[10],mag$norm_check[[10]][2],mag$pval[[10]][3])
+l11=cbind(mag$i[11],mag$norm_check[[11]][2],mag$pval[[11]][3])
+l12=cbind(mag$i[12],mag$norm_check[[12]][2],mag$pval[[12]][3])
+l13=cbind(mag$i[13],mag$norm_check[[13]][2],mag$pval[[13]][3])
+l14=cbind(mag$i[14],mag$norm_check[[14]][2],mag$pval[[14]][3])
+l15=cbind(mag$i[15],mag$norm_check[[15]][2],mag$pval[[15]][3])
+l16=cbind(mag$i[16],mag$norm_check[[16]][2],mag$pval[[16]][3])
+l17=cbind(mag$i[17],mag$norm_check[[17]][2],mag$pval[[17]][3])
+l18=cbind(mag$i[18],mag$norm_check[[18]][2],mag$pval[[18]][3])
+l19=cbind(mag$i[19],mag$norm_check[[19]][2],mag$pval[[19]][3])
+l20=cbind(mag$i[20],mag$norm_check[[20]][2],mag$pval[[20]][3])
+l21=cbind(mag$i[21],mag$norm_check[[21]][2],mag$pval[[21]][3])
+l22=cbind(mag$i[22],mag$norm_check[[22]][2],mag$pval[[22]][3])
+l23=cbind(mag$i[23],mag$norm_check[[23]][2],mag$pval[[23]][3])
+l24=cbind(mag$i[24],mag$norm_check[[24]][2],mag$pval[[24]][3])
+l25=cbind(mag$i[25],mag$norm_check[[25]][2],mag$pval[[25]][3])
+l26=cbind(mag$i[26],mag$norm_check[[26]][2],mag$pval[[26]][3])
+l27=cbind(mag$i[27],mag$norm_check[[27]][2],mag$pval[[27]][3])
+l28=cbind(mag$i[28],mag$norm_check[[28]][2],mag$pval[[28]][3])
+
+
+#Bind Rows together
+new_df=rbind(l1,l2,l3,l4,l5,l6,l7,l8,l9,l10,l11,l12,l13,l14,l15,l16,l17,l18,l19,l20,l21,l22,l23,l24,l25,l26,l27,l28)
+
+
+#Roundn p values in a data frame 
+Shapiro=round(as.numeric(new_df[,2]),digits=3)
+Bonferroni=round(as.numeric(new_df[,3]),digits=3)
+char=as.character(new_df[,1])
+
+new_df=cbind(char, Shapiro,Bonferroni)
+
+#Export the data to a .txt file for easy viewing
+#write.table(magic_result_as_dataframe(), "mydata.txt", sep="\t")
+
+#Shapiro Wikls pavalue <0.05 indicates not normally distrbuted data
+
+library(kableExtra)
+x=kable_styling(kable(new_df, col.names=c("Chemical Characteristic","Shapiro-Wilk normality test","Bonferroni or Wilcox p value"),table.attr = "style = \"color: black;\""))
+
+write.table(new_df, file = "pvalsfoaming.txt", sep = ",", quote = FALSE, row.names = F)
+
+          
+  save_kable(x, file=' EQ pvalue.png')
+   save_kable(x, file=' EQ pvalue.pdf')
+
+
+```
